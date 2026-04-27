@@ -18,6 +18,11 @@ void task_idle(void)
 
     /* 下方开始进入任务运行逻辑 */
     SL_RUN;
+
+    sl_printf("idle run");
+    sl_printf(" CONTROL=0x%02lx", __get_CONTROL());
+
+    sl_wait(500);
 }
 
 /************************** END OF FILE **************************/

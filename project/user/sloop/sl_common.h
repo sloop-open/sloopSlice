@@ -23,6 +23,8 @@
 
 #define sl_unused __attribute__((unused))
 
+#define sl_used __attribute__((used))
+
 /* 中断优先级 */
 #define SL_PRIO_HIGHEST 0
 #define SL_PRIO_LOWEST 15

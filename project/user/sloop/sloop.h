@@ -11,6 +11,7 @@
 #define __sloop_H
 
 #include "sl_common.h"
+#include "sl_slice.h"
 
 /* sloop 系统初始化 */
 void sloop_init(void);

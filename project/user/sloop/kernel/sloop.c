@@ -9,6 +9,7 @@
  *****************************************************************************/
 
 #include "sloop.h"
+#include "sl_slice.h"
 
 #define sl_check_task_not_null()      \
     if (task == NULL)                 \
@@ -89,6 +90,9 @@ void sloop(void)
 
     /* 并行任务运行 */
     parallel_task_run();
+
+    /* 运行 slice 任务 */
+    sl_slice_run();
 }
 
 /* ============================================================== */
