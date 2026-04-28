@@ -168,7 +168,7 @@ enum
 
 /* Flow 内部上下文 */
 #define _FLOW_CONTEXT(flow_name)                  \
-    static uint32_t _flow_tick sl_unused;         \
+    static sl_unused uint32_t _flow_tick;         \
     static uint32_t _flow_state;                  \
     static uint32_t _state_backup;                \
     if (flow_state_##flow_name == FLOW_INIT)      \
