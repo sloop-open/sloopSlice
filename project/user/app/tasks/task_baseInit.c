@@ -7,12 +7,16 @@
  *****************************************************************************/
 
 #include "common.h"
+#include "sl_slice.h"
 
 /* 基础驱动初始化 */
 void task_baseInit(void)
 {
     /* 初次进入任务时，执行一次 */
     SL_INIT;
+
+    /* 启动 slice 系统 */
+    sl_slice_start(task_slice);
 
     sl_goto(task_idle);
 

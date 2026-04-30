@@ -9,15 +9,16 @@
  *****************************************************************************/
 
 #include "common.h"
+#include "sl_slice.h"
 
 void task_slice(void)
 {
     while (1)
     {
         sl_printf("slice run");
-        sl_printf(" CONTROL=0x%02lx", __get_CONTROL());
 
         sl_delay(500);
+
         sl_slice_yield();
     }
 }

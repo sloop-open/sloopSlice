@@ -7,7 +7,6 @@
  *****************************************************************************/
 
 #include "common.h"
-#include "sl_slice.h"
 
 /* ============================================================== */
 /* ==用户代码区 开始== */
@@ -37,9 +36,6 @@ weak_define(task_slice);
 void _main(void)
 {
   sloop_init();
-
-  /* 启动 slice 系统 */
-  sl_slice_start(task_slice);
 
   /* 跳转到第一个任务 */
   sl_goto(task_baseInit);

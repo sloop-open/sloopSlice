@@ -20,9 +20,8 @@ void task_idle(void)
     SL_RUN;
 
     sl_printf("idle run");
-    sl_printf(" CONTROL=0x%02lx", __get_CONTROL());
 
-    sl_wait(500);
+    sl_delay(500);
 }
 
 /************************** END OF FILE **************************/

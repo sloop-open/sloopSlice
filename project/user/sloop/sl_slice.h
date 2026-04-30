@@ -18,9 +18,6 @@
 /* 启动 slice 系统 */
 void sl_slice_start(pfunc slice);
 
-/* 请求运行 slice（root -> slice） */
-void sl_slice_run(void);
-
 /* slice 主动挂起（slice -> root） */
 void sl_slice_yield(void);
 

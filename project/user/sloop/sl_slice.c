@@ -1,24 +1,26 @@
 /*==============================================================
- * Minimal root(MSP) <-> slice(PSP) switch
+ * root(MSP) <-> slice(PSP) switch
  * Cortex-M0+ / STM32G030
  *
- * 不考虑 R4-R11
- * 仅使用硬件自动压栈现场
+ * 手动保存 R4-R11
+ * 硬件自动保存:
+ * R0-R3,R12,LR,PC,xPSR
  *
  * root  : Thread + MSP
  * slice : Thread + PSP
- * PendSV负责切换
+ * PendSV 负责切换
  *=============================================================*/
 
 #include "common.h"
 
+void sl_slice_run(void);
+
 /*==============================================================*/
 #define SLICE_STACK_WORDS 128
 
-static uint32_t g_slice_stack[SLICE_STACK_WORDS];
+static uint32_t slice_stack[SLICE_STACK_WORDS];
 
-static volatile uint8_t g_started = 0;
-static volatile uint8_t g_state = 0;
+static volatile uint8_t to_slice;
 
 /*==============================================================*/
 static void slice_trap(void)
@@ -31,15 +33,16 @@ static void slice_trap(void)
 }
 
 /*==============================================================
- * 构造首次启动硬件异常栈帧
+ * 首次启动 slice 栈
  *
- * 异常返回时CPU自动弹出:
- * R0,R1,R2,R3,R12,LR,PC,xPSR
+ * [R4-R11 software frame]
+ * [hardware exception frame]
  *=============================================================*/
-static void slice_stack_init(uint32_t *top, pfunc entry)
+static void slice_stack_init(pfunc entry)
 {
-    uint32_t *sp = top;
+    uint32_t *sp = &slice_stack[SLICE_STACK_WORDS];
 
+    /* hardware frame */
     *(--sp) = 0x01000000;                  /* xPSR */
     *(--sp) = ((uint32_t)entry) | 1u;      /* PC   */
     *(--sp) = ((uint32_t)slice_trap) | 1u; /* LR   */
@@ -49,28 +52,29 @@ static void slice_stack_init(uint32_t *top, pfunc entry)
     *(--sp) = 0;                           /* R1   */
     *(--sp) = 0;                           /* R0   */
 
+    /* software frame R4-R11 */
+    for (int i = 0; i < 8; i++)
+        *(--sp) = 0;
+
     __set_PSP((uint32_t)sp);
 }
 
 /*==============================================================*/
 void sl_slice_start(pfunc task)
 {
-    slice_stack_init(
-        &g_slice_stack[SLICE_STACK_WORDS],
-        task);
+    slice_stack_init(task);
 
     NVIC_SetPriority(PendSV_IRQn, 3);
 
-    g_started = 1;
+    sl_task_start(sl_slice_run);
+
+    sl_printf("slice start");
 }
 
 /*==============================================================*/
 void sl_slice_run(void)
 {
-    if (!g_started)
-        return;
-
-    g_state = 1;
+    to_slice = 1;
 
     SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
     __DSB();
@@ -80,32 +84,123 @@ void sl_slice_run(void)
 /*==============================================================*/
 void sl_slice_yield(void)
 {
-    g_state = 0;
+    to_slice = 0;
 
     SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
     __DSB();
     __ISB();
 }
 
+/*==============================================================
+ * PendSV
+ *=============================================================*/
 __attribute__((naked)) void PendSV_Handler(void)
 {
     __asm volatile(
-        ".syntax unified        \n"
+        ".syntax unified                \n"
 
-        "ldr r0, =g_state       \n"
-        "ldrb r1, [r0]          \n"
-        "cmp r1, #1             \n"
-        "beq to_slice           \n"
+        "ldr r0, =to_slice             \n"
+        "ldrb r1, [r0]                 \n"
+        "cmp r1, #1                    \n"
+        "beq to_slice_path             \n"
 
-        "to_root:               \n"
+        /*==================================================
+         * slice -> root
+         * save PSP / restore MSP
+         *=================================================*/
+        "to_root_path:                 \n"
 
-        "ldr r0, =0xFFFFFFF9    \n"
-        "mov lr, r0             \n"
-        "bx lr                  \n"
+        /* save slice R4-R11 to PSP */
+        "mrs r0, psp                   \n"
+        "subs r0, #32                  \n"
 
-        "to_slice:              \n"
+        "str r4, [r0,#0]               \n"
+        "str r5, [r0,#4]               \n"
+        "str r6, [r0,#8]               \n"
+        "str r7, [r0,#12]              \n"
 
-        "ldr r0, =0xFFFFFFFD    \n"
-        "mov lr, r0             \n"
-        "bx lr                  \n");
+        "mov r1, r8                    \n"
+        "str r1, [r0,#16]              \n"
+        "mov r1, r9                    \n"
+        "str r1, [r0,#20]              \n"
+        "mov r1, r10                   \n"
+        "str r1, [r0,#24]              \n"
+        "mov r1, r11                   \n"
+        "str r1, [r0,#28]              \n"
+
+        "msr psp, r0                   \n"
+
+        /* restore root R4-R11 from MSP */
+        "mrs r0, msp                   \n"
+
+        "ldr r4, [r0,#0]               \n"
+        "ldr r5, [r0,#4]               \n"
+        "ldr r6, [r0,#8]               \n"
+        "ldr r7, [r0,#12]              \n"
+
+        "ldr r1, [r0,#16]              \n"
+        "mov r8, r1                    \n"
+        "ldr r1, [r0,#20]              \n"
+        "mov r9, r1                    \n"
+        "ldr r1, [r0,#24]              \n"
+        "mov r10, r1                   \n"
+        "ldr r1, [r0,#28]              \n"
+        "mov r11, r1                   \n"
+
+        "adds r0, #32                  \n"
+        "msr msp, r0                   \n"
+
+        "ldr r0, =0xFFFFFFF9           \n"
+        "mov lr, r0                    \n"
+        "bx lr                         \n"
+
+        /*==================================================
+         * root -> slice
+         * save MSP / restore PSP
+         *=================================================*/
+        "to_slice_path:                \n"
+
+        /* save root R4-R11 to MSP */
+        "mrs r0, msp                   \n"
+        "subs r0, #32                  \n"
+
+        "str r4, [r0,#0]               \n"
+        "str r5, [r0,#4]               \n"
+        "str r6, [r0,#8]               \n"
+        "str r7, [r0,#12]              \n"
+
+        "mov r1, r8                    \n"
+        "str r1, [r0,#16]              \n"
+        "mov r1, r9                    \n"
+        "str r1, [r0,#20]              \n"
+        "mov r1, r10                   \n"
+        "str r1, [r0,#24]              \n"
+        "mov r1, r11                   \n"
+        "str r1, [r0,#28]              \n"
+
+        "msr msp, r0                   \n"
+
+        /* restore slice R4-R11 from PSP */
+        "mrs r0, psp                   \n"
+
+        "ldr r4, [r0,#0]               \n"
+        "ldr r5, [r0,#4]               \n"
+        "ldr r6, [r0,#8]               \n"
+        "ldr r7, [r0,#12]              \n"
+
+        "ldr r1, [r0,#16]              \n"
+        "mov r8, r1                    \n"
+        "ldr r1, [r0,#20]              \n"
+        "mov r9, r1                    \n"
+        "ldr r1, [r0,#24]              \n"
+        "mov r10, r1                   \n"
+        "ldr r1, [r0,#28]              \n"
+        "mov r11, r1                   \n"
+
+        "adds r0, #32                  \n"
+        "msr psp, r0                   \n"
+
+        "ldr r0, =0xFFFFFFFD           \n"
+        "mov lr, r0                    \n"
+        "bx lr                         \n");
 }
