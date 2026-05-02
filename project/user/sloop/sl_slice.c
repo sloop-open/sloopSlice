@@ -131,6 +131,7 @@ void sl_slice_yield(void)
 __attribute__((naked)) void PendSV_Handler(void)
 {
     __asm volatile(
+        "cpsid i                        \n"
         ".syntax unified                \n"
 
         "ldr r0, =to_slice             \n"
@@ -186,6 +187,7 @@ __attribute__((naked)) void PendSV_Handler(void)
 
         "ldr r0, =0xFFFFFFF9           \n"
         "mov lr, r0                    \n"
+        "cpsie i                       \n"
         "bx lr                         \n"
 
         /*==================================================
@@ -236,5 +238,6 @@ __attribute__((naked)) void PendSV_Handler(void)
 
         "ldr r0, =0xFFFFFFFD           \n"
         "mov lr, r0                    \n"
+        "cpsie i                       \n"
         "bx lr                         \n");
 }
