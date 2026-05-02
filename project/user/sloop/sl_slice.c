@@ -64,6 +64,11 @@ static void slice_stack_init(pfunc entry)
 /*==============================================================*/
 void sl_slice_start(pfunc task)
 {
+    __HAL_TIM_SET_AUTORELOAD(&htim14, (200 - 1));
+
+    HAL_NVIC_SetPriority(TIM14_IRQn, 3, 0);
+    HAL_NVIC_SetPriority(PendSV_IRQn, 3, 0);
+
     slice_stack_init(task);
 
     sl_task_start(sl_slice_run);
@@ -93,7 +98,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /*==============================================================*/
 void sl_slice_run(void)
 {
-    HAL_TIM_Base_Stop(&htim14);
+    HAL_TIM_Base_Stop_IT(&htim14);
 
     __HAL_TIM_SET_COUNTER(&htim14, 0);
 
