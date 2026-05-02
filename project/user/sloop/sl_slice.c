@@ -62,9 +62,9 @@ static void slice_stack_init(pfunc entry)
 }
 
 /*==============================================================*/
-void sl_slice_start(pfunc task)
+void sl_slice_start(int us, pfunc task)
 {
-    __HAL_TIM_SET_AUTORELOAD(&htim14, (200 - 1));
+    __HAL_TIM_SET_AUTORELOAD(&htim14, (us - 1));
 
     HAL_NVIC_SetPriority(TIM14_IRQn, 3, 0);
     HAL_NVIC_SetPriority(PendSV_IRQn, 3, 0);
