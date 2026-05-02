@@ -12,8 +12,10 @@
  *=============================================================*/
 
 #include "common.h"
+#include "tim.h"
 
 void sl_slice_run(void);
+void sl_slice_yield(void);
 
 /*==============================================================*/
 #define SLICE_STACK_WORDS 128
@@ -64,16 +66,41 @@ void sl_slice_start(pfunc task)
 {
     slice_stack_init(task);
 
-    NVIC_SetPriority(PendSV_IRQn, 3);
-
     sl_task_start(sl_slice_run);
 
     sl_printf("slice start");
 }
 
 /*==============================================================*/
+void sl_slice_stop(void)
+{
+    HAL_TIM_Base_Stop_IT(&htim14);
+
+    sl_task_stop(sl_slice_run);
+
+    sl_printf("slice stop");
+}
+
+/*==============================================================*/
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim == &htim14)
+    {
+        sl_slice_yield();
+    }
+}
+
+/*==============================================================*/
 void sl_slice_run(void)
 {
+    HAL_TIM_Base_Stop(&htim14);
+
+    __HAL_TIM_SET_COUNTER(&htim14, 0);
+
+    __HAL_TIM_CLEAR_IT(&htim14, TIM_IT_UPDATE);
+
+    HAL_TIM_Base_Start_IT(&htim14);
+
     to_slice = 1;
 
     SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
@@ -84,6 +111,8 @@ void sl_slice_run(void)
 /*==============================================================*/
 void sl_slice_yield(void)
 {
+    HAL_TIM_Base_Stop_IT(&htim14);
+
     to_slice = 0;
 
     SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;

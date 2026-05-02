@@ -9,7 +9,6 @@
  *****************************************************************************/
 
 #include "common.h"
-#include "sl_slice.h"
 
 void task_slice(void)
 {
@@ -17,9 +16,7 @@ void task_slice(void)
     {
         sl_printf("slice run");
 
-        sl_delay(500);
-
-        sl_slice_yield();
+        sl_delay(200);
     }
 }
 

@@ -21,7 +21,7 @@ void task_idle(void)
 
     sl_printf("idle run");
 
-    sl_delay(500);
+    sl_wait(500);
 }
 
 /************************** END OF FILE **************************/

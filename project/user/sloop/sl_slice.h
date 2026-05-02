@@ -18,8 +18,8 @@
 /* 启动 slice 系统 */
 void sl_slice_start(pfunc slice);
 
-/* slice 主动挂起（slice -> root） */
-void sl_slice_yield(void);
+/* 停止 slice 系统 */
+void sl_slice_stop(void);
 
 #endif /* __sl_slice_H */
 
