@@ -14,6 +14,13 @@
 #include "common.h"
 #include "tim.h"
 
+#define sl_check_slice_not_null()      \
+    if (slice == NULL)                 \
+    {                                  \
+        sl_error("The slice is null"); \
+        return;                        \
+    }
+
 void sl_slice_run(void);
 void sl_slice_yield(void);
 
@@ -62,14 +69,23 @@ static void slice_stack_init(pfunc entry)
 }
 
 /*==============================================================*/
-void sl_slice_start(int us, pfunc task)
+void sl_slice_start(int us, pfunc slice)
 {
+    sl_check_slice_not_null();
+
+    if (us < 50)
+    {
+        us = 50;
+
+        sl_error("us must be at least 50us");
+    }
+
     __HAL_TIM_SET_AUTORELOAD(&htim14, (us - 1));
 
     HAL_NVIC_SetPriority(TIM14_IRQn, 3, 0);
     HAL_NVIC_SetPriority(PendSV_IRQn, 3, 0);
 
-    slice_stack_init(task);
+    slice_stack_init(slice);
 
     sl_task_start(sl_slice_run);
 

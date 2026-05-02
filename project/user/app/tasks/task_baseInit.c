@@ -16,7 +16,7 @@ void task_baseInit(void)
     SL_INIT;
 
     /* Æô¶¯ slice ÏµÍ³ */
-    sl_slice_start(200, task_slice);
+    sl_slice_start(50, task_slice);
 
     sl_goto(task_idle);
 
