@@ -100,6 +100,12 @@ void sl_slice_stop(void)
     sl_task_stop(sl_slice_run);
 
     sl_printf("slice stop");
+
+    /* 如果在slice中，要切回root */
+    if (to_slice)
+    {
+        sl_slice_yield();
+    }
 }
 
 /*==============================================================*/

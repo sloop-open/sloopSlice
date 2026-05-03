@@ -16,7 +16,7 @@ void task_slice(void)
     {
         sl_printf("slice run");
 
-        sl_delay(200);
+        sl_delay(1000);
     }
 }
 
