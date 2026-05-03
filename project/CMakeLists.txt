@@ -42,31 +42,47 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
-# 自动收集源码
-file(GLOB_RECURSE USER_SOURCES CONFIGURE_DEPENDS
-    user/*.c
+# 模块化源文件配置
+# sloop 内核
+set(SLOOP_KERNEL_SOURCES
+    user/sloop/kernel/sloop.c
+    user/sloop/sl_slice.c
 )
 
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    ${USER_SOURCES}
+# SEGGER RTT
+set(SLOOP_RTT_SOURCES
+    user/sloop/RTT/SEGGER_RTT.c
+    user/sloop/RTT/SEGGER_RTT_printf.c
 )
 
-# 自动收集头文件目录
-file(GLOB_RECURSE USER_HEADERS
-    user/*.h
+# user/app 应用
+set(USER_APP_SOURCES
+    user/app/_main.c
+    user/app/tasks/task_baseInit.c
+    user/app/tasks/task_demo.c
+    user/app/tasks/task_flow.c
+    user/app/tasks/task_idle.c
+    user/app/tasks/task_slice.c
 )
 
-set(USER_INCLUDE_DIRS "")
-foreach(h ${USER_HEADERS})
-    get_filename_component(dir ${h} DIRECTORY)
-    list(APPEND USER_INCLUDE_DIRS ${dir})
-endforeach()
-
-list(REMOVE_DUPLICATES USER_INCLUDE_DIRS)
-
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    ${USER_INCLUDE_DIRS}
+# 合并所有源文件
+set(ALL_SOURCES
+    ${SLOOP_KERNEL_SOURCES}
+    ${SLOOP_RTT_SOURCES}
+    ${USER_APP_SOURCES}
 )
+
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${ALL_SOURCES})
+
+# 模块化头文件目录
+set(SLOOP_INCLUDE_DIRS
+    user/sloop
+    user/sloop/RTT
+    user/app
+    user/app/config
+)
+
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${SLOOP_INCLUDE_DIRS})
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
